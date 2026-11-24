@@ -1,5 +1,5 @@
 <!-- título del repo: cambia por tus nombres reales -->
-# U3p1 — Pesqueira Gamez Manuel Angel
+# U3p2 — Pesqueira Gamez Manuel Angel
 
 <!-- sección con los pasos para correr el proyecto en otra computadora -->
 ## Cómo correrlo localmente
