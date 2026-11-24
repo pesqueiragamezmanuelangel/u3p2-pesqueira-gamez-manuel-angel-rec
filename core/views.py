@@ -32,11 +32,14 @@ def inicio(request):
     return render(request, 'core/inicio.html', contexto)
 
 
-# servicios: la vista del listado de la Semana 4 (no cambia)
+# @login_required: NUEVO aquí; si no hay sesión, manda a LOGIN_URL en lugar de ejecutar la vista
+@login_required
+# servicios: la vista del listado
 def servicios(request):
-    # .objects.all(): pide TODOS los servicios a MySQL
-    lista_servicios = Servicio.objects.all()
-    # entrega la lista a la plantilla con el nombre "servicios"
+    # filter(propietario=request.user): SELECT ... WHERE propietario_id = <id del usuario logueado>
+    # reemplaza al .all() de la Semana 4, que traía los servicios de TODOS los usuarios
+    lista_servicios = Servicio.objects.filter(propietario=request.user)
+    # render: dibuja la tabla solo con los servicios del usuario actual
     return render(request, 'core/servicios.html', {'servicios': lista_servicios})
 
 
@@ -66,35 +69,37 @@ def crear_servicio(request):
     return render(request, 'core/servicio_form.html', {'form': form, 'titulo_pagina': 'Nuevo servicio'})
 
 
-# @login_required: solo usuarios con sesión iniciada pueden editar
+# @login_required: solo usuarios con sesión pueden editar
 @login_required
-# pk: la clave primaria (id) que Django extrae del pedazo <int:pk> de la URL (paso 05)
+# pk: el id que viene en la URL /servicios/<pk>/editar/
 def editar_servicio(request, pk):
-    # busca el Servicio con ese id; si no existe, responde 404 automáticamente
-    servicio = get_object_or_404(Servicio, pk=pk)
+    # get_object_or_404 con DOS condiciones: el id correcto Y que el dueño sea el usuario actual
+    # si alguien intenta editar el servicio de otro cambiando el número en la URL, recibe un 404
+    servicio = get_object_or_404(Servicio, pk=pk, propietario=request.user)
     # si el usuario envió el formulario con cambios, la petición llega como POST
     if request.method == 'POST':
-        # instance=servicio: le dice al formulario "actualiza ESTE registro, no crees uno nuevo"
+        # instance=servicio: el formulario actualiza ESE registro en vez de crear uno nuevo
         form = ServicioForm(request.POST, instance=servicio)
-        # is_valid(): revisa tipos de dato y campos obligatorios
+        # is_valid(): revisa tipos, campos obligatorios y tu clean_precio
         if form.is_valid():
-            # save(): al tener instance=, guarda los cambios sobre el mismo registro (UPDATE, no INSERT)
+            # save(): guarda los cambios en MySQL (UPDATE)
             form.save()
             # redirect: regresa al listado después de guardar
             return redirect('servicios')
     # si no es POST, es GET: se acaba de abrir la pantalla de edición
     else:
-        # instance=servicio sin datos de POST: precarga el formulario con los valores actuales
+        # formulario precargado con los datos actuales del servicio
         form = ServicioForm(instance=servicio)
-    # render: reutiliza servicio_form.html con el título "Editar servicio"
+    # render: dibuja el mismo template de Crear, con título "Editar servicio"
     return render(request, 'core/servicio_form.html', {'form': form, 'titulo_pagina': 'Editar servicio'})
+
 
 # @login_required: solo usuarios con sesión iniciada pueden borrar
 @login_required
 # eliminar_servicio: recibe el pk (id) desde la URL /servicios/<pk>/eliminar/
 def eliminar_servicio(request, pk):
-    # busca el registro exacto a borrar, igual que en editar_servicio
-    servicio = get_object_or_404(Servicio, pk=pk)
+    # mismo candado que en editar: el id correcto Y que el dueño sea el usuario actual; si no, 404
+    servicio = get_object_or_404(Servicio, pk=pk, propietario=request.user)
     # solo se borra si llega un POST (el botón de confirmar), nunca con un simple GET
     if request.method == 'POST':
         # delete(): borra la fila de MySQL de verdad
@@ -149,6 +154,7 @@ def iniciar_sesion(request):
         form = AuthenticationForm()
     # render: dibuja login.html con el formulario (vacío o con el error de credenciales)
     return render(request, 'core/login.html', {'form': form})
+
 
 # cerrar_sesion: la vista que atiende /logout/
 def cerrar_sesion(request):
