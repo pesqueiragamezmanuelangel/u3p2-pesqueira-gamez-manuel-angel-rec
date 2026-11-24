@@ -149,3 +149,12 @@ def iniciar_sesion(request):
         form = AuthenticationForm()
     # render: dibuja login.html con el formulario (vacío o con el error de credenciales)
     return render(request, 'core/login.html', {'form': form})
+
+# cerrar_sesion: la vista que atiende /logout/
+def cerrar_sesion(request):
+    # logout(request): invalida la sesión actual; request.user vuelve a ser AnonymousUser
+    logout(request)
+    # messages.info: guarda un mensaje que se muestra una única vez en la próxima página
+    messages.info(request, 'Sesión cerrada correctamente.')
+    # redirect: manda a la pantalla de login, donde se verá el mensaje
+    return redirect('login')
